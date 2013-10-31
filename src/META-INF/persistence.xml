@@ -5,6 +5,7 @@
     <class>org.syncany.db.CloneChunk</class>
     <class>org.syncany.db.CloneClient</class>
     <class>org.syncany.db.CloneFile</class>
+    <shared-cache-mode>NONE</shared-cache-mode>
     <properties>
       <property name="javax.persistence.jdbc.url" value="REPLACED_BY_APPLICATION"/>
       <property name="javax.persistence.jdbc.user" value=""/>
@@ -13,9 +14,14 @@
       
       <!-- EclipseLink specific -->
       <property name="eclipselink.ddl-generation" value="REPLACED_BY_APPLICATION"/>
-          
-      <property name="eclipselink.logging.logger" value="JavaLogger"/>
-      <property name="eclipselink.logging.level" value="WARNING"/>    
-      </properties>
+      <property name="eclipselink.cache.shared.default" value="false"/>
+      <property name="eclipselink.cache.size.default" value="0"/>
+      <property name="eclipselink.cache.type.default" value="None"/>
+      <property name="eclipselink.query-results-cache" value="false"/>
+      <!--<property name="eclipselink.logging.logger" value="JavaLogger"/>-->
+      <property name="eclipselink.logging.logger" value="org.syncany.db.CustomSessionLogger"/>
+      <property name="eclipselink.logging.level" value="WARNING"/>
+      <property name="eclipselink.logging.parameters" value="true"/>   
+    </properties>
   </persistence-unit>
 </persistence>

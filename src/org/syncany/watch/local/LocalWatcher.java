@@ -123,7 +123,8 @@ public abstract class LocalWatcher {
         }
 
         if (env.getOperatingSystem() == OperatingSystem.Linux
-            || env.getOperatingSystem() == OperatingSystem.Windows) {
+            || env.getOperatingSystem() == OperatingSystem.Windows
+            || env.getOperatingSystem() == OperatingSystem.Mac) {
             
             instance = new CommonLocalWatcher(); 
             return instance;

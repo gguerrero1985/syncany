@@ -83,7 +83,7 @@ public class LinuxNativeClient {
             return;
         }
 
-        startService();
+        //startService();
         startNopThread();
         initialized = true;
 

@@ -18,6 +18,7 @@
 package org.syncany;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
@@ -26,29 +27,42 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import org.syncany.config.ConfigNode;
+import org.w3c.dom.Document;
+import org.xml.sax.SAXException;
 
 /**
  *
  * @author Philipp C. Heckel
+ * @author Guillermo Guerrero
  */
 public class Environment {
+
     private static final Logger logger = Logger.getLogger(Environment.class.getSimpleName());
     private static Environment instance;
-    
-    public enum OperatingSystem { Windows, Linux, Mac };
+
+    public enum OperatingSystem {
+
+        Windows, Linux, Mac
+    };
 
     private OperatingSystem operatingSystem;
     private String architecture;
-    
+
+    private String defaultUserHome;
     private File defaultUserConfDir;
     private File defaultUserConfigFile;
-    
+
     private File appDir;
     private File appBinDir;
     private File appResDir;
     private File appConfDir;
     private File appLibDir;
-    
+
     /**
      * Local computer name / host name.
      */
@@ -59,90 +73,169 @@ public class Environment {
      */
     private static String userName;
 
-
     public synchronized static Environment getInstance() {
-    if (instance == null)
-        instance = new Environment();
-	
+        if (instance == null) {
+            instance = new Environment();
+        }
+
         return instance;
     }
 
+    private String getDefaultUserDir() {
+        String path = "";
+        if (System.getProperty("user.dir") != null) {
+            path = System.getProperty("user.dir");
+
+            File tryPath = new File(path);
+            if (!tryPath.exists()) {
+                throw new RuntimeException("Property 'user.dir' doesn't exist: " + tryPath);
+            }
+        } else {
+            throw new RuntimeException("Property 'user.dir' must be set.");
+        }
+
+        return path;
+    }
+
     private Environment() {
+        String homePath;
         // Check must-haves
-        if (System.getProperty("syncany.home") == null)
-            throw new RuntimeException("Property 'syncany.home' must be set.");	
+        if (System.getProperty("stacksync.home") == null) {
+            homePath = getDefaultUserDir();
+        } else {
+            homePath = System.getProperty("stacksync.home");
+            File tryPath = new File(homePath);
+            if (!tryPath.exists()) {
+                homePath = getDefaultUserDir();
+            }
+        }
 
         // Architecture
         if ("32".equals(System.getProperty("sun.arch.data.model"))) {
             architecture = "i386";
-        }
-        else if ("64".equals(System.getProperty("sun.arch.data.model"))) {
+        } else if ("64".equals(System.getProperty("sun.arch.data.model"))) {
             architecture = "amd64";
-        }
-        else {
-            throw new RuntimeException("Syncany only supports 32bit and 64bit systems, not '"+System.getProperty("sun.arch.data.model")+"'.");	
+        } else {
+            throw new RuntimeException("Syncany only supports 32bit and 64bit systems, not '" + System.getProperty("sun.arch.data.model") + "'.");
         }
 
         // Do initialization!
-        if (System.getProperty("os.name").contains("Linux")) {
+        defaultUserHome = System.getProperty("user.home") + File.separator;
+
+        String osName = System.getProperty("os.name").toLowerCase();
+        if (osName.contains("linux")) {
             operatingSystem = OperatingSystem.Linux;
-            defaultUserConfDir = new File(System.getProperty("user.home")+"/."+Constants.APPLICATION_NAME.toLowerCase());	    
-        }
-        else if (System.getProperty("os.name").contains("Windows")) {
+            defaultUserConfDir = new File(defaultUserHome + "." + Constants.APPLICATION_NAME.toLowerCase());
+        } else if (osName.contains("windows")) {
             operatingSystem = OperatingSystem.Windows;
-            defaultUserConfDir = new File(System.getProperty("user.home")+"\\"+Constants.APPLICATION_NAME);
-        }		 
-        else {
-            throw new RuntimeException("Your system is not supported at the moment: "+System.getProperty("os.name"));
+            if (osName.contains("xp")) {//windows xp
+                defaultUserConfDir = new File(defaultUserHome + "Application Data" + File.separator + Constants.APPLICATION_NAME.toLowerCase());
+            } else { //windows 7, 8
+                defaultUserConfDir = new File(defaultUserHome + "AppData" + File.separator + "Roaming" + File.separator + Constants.APPLICATION_NAME.toLowerCase());
+            }
+        } else if (osName.contains("mac os x")) {
+            operatingSystem = OperatingSystem.Mac;
+            defaultUserConfDir = new File(defaultUserHome + "." + Constants.APPLICATION_NAME.toLowerCase());
+        } else {
+            throw new RuntimeException("Your system is not supported at the moment: " + System.getProperty("os.name"));
         }
 
         // Common values
-        defaultUserConfigFile = new File(defaultUserConfDir.getAbsoluteFile()+File.separator+Constants.CONFIG_FILENAME);
+        defaultUserConfigFile = new File(defaultUserConfDir.getAbsoluteFile() + File.separator + Constants.CONFIG_FILENAME);
 
-        appDir = new File(System.getProperty("syncany.home"));
-        appBinDir = new File(appDir.getAbsoluteFile()+File.separator+"bin");
-        appResDir = new File(appDir.getAbsoluteFile()+File.separator+"res");
-        appConfDir = new File(appDir.getAbsoluteFile()+File.separator+"conf");
-        appLibDir = new File(appDir.getAbsoluteFile()+File.separator+"lib");
+        appDir = new File(homePath);
+        appBinDir = new File(appDir.getAbsoluteFile() + File.separator + "bin");
+        appResDir = new File(appDir.getAbsoluteFile() + File.separator + "res");
+        appConfDir = new File(appDir.getAbsoluteFile() + File.separator + "conf");
+        appLibDir = new File(appDir.getAbsoluteFile() + File.separator + "lib");
 
         // Errors
-        if (!appDir.exists() )
-            throw new RuntimeException("Could not find application directory at "+appResDir);
+        if (!appDir.exists()) {
+            throw new RuntimeException("Could not find application directory at " + appResDir);
+        }
 
-        if (!appResDir.exists() )
-            throw new RuntimeException("Could not find application resources directory at "+appResDir);
+        if (!appResDir.exists()) {
+            throw new RuntimeException("Could not find application resources directory at " + appResDir);
+        }
 
-        if (!appConfDir.exists() )
-            throw new RuntimeException("Could not find application config directory at "+appConfDir);
+        if (!appConfDir.exists()) {
+            throw new RuntimeException("Could not find application config directory at " + appConfDir);
+        }
 
-        if (!appLibDir.exists() )
-            throw new RuntimeException("Could not find application library directory at "+appLibDir);
+        if (!appLibDir.exists()) {
+            throw new RuntimeException("Could not find application library directory at " + appLibDir);
+        }
 
-        // Machine stuff
-        try { machineName = InetAddress.getLocalHost().getHostName(); }
-        catch (UnknownHostException ex) { machineName = "(unknown)"; }
+        // Machine stuff        
+        java.util.Date date = new java.util.Date();
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyyMMddHHmm");
 
+        String defaultMachineName;
+        try {
+            defaultMachineName = InetAddress.getLocalHost().getHostName();
+
+            if (defaultMachineName.length() > 10) {
+                defaultMachineName = InetAddress.getLocalHost().getHostName().substring(0, 9);
+            }
+            defaultMachineName += sdf.format(date);
+        } catch (UnknownHostException ex) {
+            logger.log(Level.SEVERE, "Cannot find host {0}", ex);
+            defaultMachineName = "(unknown)" + sdf.format(date);
+        }
+
+        if (defaultUserConfigFile.exists()) {
+            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+            try {
+                DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+
+                Document doc = dBuilder.parse(defaultUserConfigFile);
+                ConfigNode self = new ConfigNode(doc.getDocumentElement());
+                machineName = self.getProperty("machinename", defaultMachineName);
+
+                if (machineName.isEmpty()) {
+                    machineName = defaultMachineName;
+                }
+            } catch (IOException ex) {
+                logger.log(Level.SEVERE, "aplicationstarter#ERROR: cant set machineName {0}", ex);
+                machineName = defaultMachineName;
+            } catch (ParserConfigurationException ex) {
+                logger.log(Level.SEVERE, "aplicationstarter#ERROR: cant set machineName {0}", ex);
+                machineName = defaultMachineName;
+            } catch (SAXException ex) {
+                logger.log(Level.SEVERE, "aplicationstarter#ERROR: cant set machineName {0}", ex);
+                machineName = defaultMachineName;
+            }
+        } else {
+            machineName = defaultMachineName;
+        }
+
+        machineName = machineName.replace("-", "_");
         userName = System.getProperty("user.name");
 
         // GUI 
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                    //java.util.Enumeration keys = UIManager.getDefaults().keys();
-                    
+            //java.util.Enumeration keys = UIManager.getDefaults().keys();
+
             /*while (keys.hasMoreElements()) {
-              Object key = keys.nextElement();
-              Object value = UIManager.get (key);
+             Object key = keys.nextElement();
+             Object value = UIManager.get (key);
                 
-              if (value instanceof FontUIResource) {
-                  FontUIResource f = (FontUIResource) value;
-                  f = new FontUIResource(f.getFamily(), f.getStyle(), f.getSize()-2);
-                  System.out.println(key +" = "+value);
-                    UIManager.put (key, f);
+             if (value instanceof FontUIResource) {
+             FontUIResource f = (FontUIResource) value;
+             f = new FontUIResource(f.getFamily(), f.getStyle(), f.getSize()-2);
+             System.out.println(key +" = "+value);
+             UIManager.put (key, f);
               
-              }
-            }*/
-        }
-        catch (Exception ex) {
+             }
+             }*/
+        } catch (ClassNotFoundException ex) {
+            logger.log(Level.SEVERE, "Couldn't set native look and feel.", ex);
+        } catch (IllegalAccessException ex) {
+            logger.log(Level.SEVERE, "Couldn't set native look and feel.", ex);
+        } catch (InstantiationException ex) {
+            logger.log(Level.SEVERE, "Couldn't set native look and feel.", ex);
+        } catch (UnsupportedLookAndFeelException ex) {
             logger.log(Level.SEVERE, "Couldn't set native look and feel.", ex);
         }
     }
@@ -165,8 +258,8 @@ public class Environment {
 
     public File getAppLibDir() {
         return appLibDir;
-    }        
-    
+    }
+
     public File getDefaultUserConfigFile() {
         return defaultUserConfigFile;
     }
@@ -174,9 +267,9 @@ public class Environment {
     public File getDefaultUserConfigDir() {
         return defaultUserConfDir;
     }
-    
+
     public String getMachineName() {
-        return machineName;
+        return machineName.replace("-", "_");
     }
 
     public String getUserName() {
@@ -189,8 +282,8 @@ public class Environment {
 
     public String getArchitecture() {
         return architecture;
-    }    
-    
+    }
+
     public void main(String[] args) {
         Properties properties = System.getProperties();
 
@@ -201,16 +294,16 @@ public class Environment {
 
         while (e.hasMoreElements()) {
             String key = (String) e.nextElement();
-            System.out.println(key+" = "+System.getProperty(key));	    
+            System.out.println(key + " = " + System.getProperty(key));
         }
 
         System.out.println("ENV");
         System.out.println("---------------");
 
-        for (Map.Entry<String,String> es : System.getenv().entrySet()) {
-            System.out.println(es.getKey()+" = "+es.getValue());	
+        for (Map.Entry<String, String> es : System.getenv().entrySet()) {
+            System.out.println(es.getKey() + " = " + es.getValue());
         }
-	
+
     }
 
 }

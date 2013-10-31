@@ -25,7 +25,6 @@ import org.syncany.gui.tray.windows.WindowsTray;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -68,10 +67,11 @@ public abstract class Tray {
         if (env.getOperatingSystem() == Environment.OperatingSystem.Linux) {
             instance = new LinuxTray();
             return instance;
-        }
-
-        else if (env.getOperatingSystem() == Environment.OperatingSystem.Windows) {
+        } else if (env.getOperatingSystem() == Environment.OperatingSystem.Windows) {
             instance = new WindowsTray();
+            return instance;
+        } else if (env.getOperatingSystem() == Environment.OperatingSystem.Mac) {
+            instance = new LinuxTray();
             return instance;
         }
 

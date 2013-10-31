@@ -45,6 +45,7 @@ import org.w3c.dom.Document;
 /**
  *
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
+ * @author Guillermo Guerrero
  */
 public class Config {   
     // Note: Do NOT add a logger here, as the logger needs the Config instance.
@@ -156,6 +157,8 @@ public class Config {
                 switch (env.getOperatingSystem()){
                     case Linux:
                         return new File(System.getProperty("user.home")+File.separator+".face");
+                    case Mac:
+                        return new File(System.getProperty("user.home")+File.separator+".face");                        
                     case Windows:
                         return new File(getConfDir()+File.separator+"profile.png");
                     default:

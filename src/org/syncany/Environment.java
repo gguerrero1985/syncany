@@ -21,9 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Enumeration;
-import java.util.Map;
-import java.util.Properties;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.UIManager;
@@ -106,7 +104,7 @@ public class Environment {
             homePath = System.getProperty("stacksync.home");
             File tryPath = new File(homePath);
             if (!tryPath.exists()) {
-                homePath = getDefaultUserDir();
+                throw new RuntimeException("Property 'stacksync.home' must be set.");
             }
         }
 
@@ -114,7 +112,7 @@ public class Environment {
         if ("32".equals(System.getProperty("sun.arch.data.model"))) {
             architecture = "i386";
         } else if ("64".equals(System.getProperty("sun.arch.data.model"))) {
-            architecture = "amd64";
+            architecture = "x84_64";
         } else {
             throw new RuntimeException("Syncany only supports 32bit and 64bit systems, not '" + System.getProperty("sun.arch.data.model") + "'.");
         }
@@ -140,28 +138,28 @@ public class Environment {
             throw new RuntimeException("Your system is not supported at the moment: " + System.getProperty("os.name"));
         }
 
-        // Common values
-        defaultUserConfigFile = new File(defaultUserConfDir.getAbsoluteFile() + File.separator + Constants.CONFIG_FILENAME);
-
-        appDir = new File(homePath);
-        appBinDir = new File(appDir.getAbsoluteFile() + File.separator + "bin");
-        appResDir = new File(appDir.getAbsoluteFile() + File.separator + "res");
-        appConfDir = new File(appDir.getAbsoluteFile() + File.separator + "conf");
-        appLibDir = new File(appDir.getAbsoluteFile() + File.separator + "lib");
-
         // Errors
+        appDir = new File(homePath);
         if (!appDir.exists()) {
             throw new RuntimeException("Could not find application directory at " + appResDir);
         }
 
+        appBinDir = new File(appDir.getAbsoluteFile() + File.separator + "bin");
+        if (!appBinDir.exists()) {
+            throw new RuntimeException("Could not find application binaries directory at " + appResDir);
+        }
+
+        appResDir = new File(appDir.getAbsoluteFile() + File.separator + "res");
         if (!appResDir.exists()) {
             throw new RuntimeException("Could not find application resources directory at " + appResDir);
         }
 
+        appConfDir = new File(appDir.getAbsoluteFile() + File.separator + "conf");
         if (!appConfDir.exists()) {
             throw new RuntimeException("Could not find application config directory at " + appConfDir);
         }
 
+        appLibDir = new File(appDir.getAbsoluteFile() + File.separator + "lib");
         if (!appLibDir.exists()) {
             throw new RuntimeException("Could not find application library directory at " + appLibDir);
         }
@@ -183,6 +181,8 @@ public class Environment {
             defaultMachineName = "(unknown)" + sdf.format(date);
         }
 
+        // Common values
+        defaultUserConfigFile = new File(defaultUserConfDir.getAbsoluteFile() + File.separator + Constants.CONFIG_FILENAME);
         if (defaultUserConfigFile.exists()) {
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
             try {
@@ -284,26 +284,24 @@ public class Environment {
         return architecture;
     }
 
-    public void main(String[] args) {
-        Properties properties = System.getProperties();
+    public HashMap<String, String> getProperties() {
+        HashMap<String, String> properties = new HashMap<String, String>();
 
-        Enumeration e = properties.propertyNames();
+        properties.put("operatingSystem", operatingSystem.toString());
+        properties.put("architecture", architecture);
+        properties.put("defaultUserHome", defaultUserHome);
+        properties.put("defaultUserConfDir", defaultUserConfDir.getAbsolutePath());
+        properties.put("defaultUserConfigFile", defaultUserConfigFile.getAbsolutePath());
 
-        System.out.println("Properties");
-        System.out.println("---------------");
+        properties.put("appDir", appDir.getAbsolutePath());
+        properties.put("appBinDir", appBinDir.getAbsolutePath());
+        properties.put("appResDir", appResDir.getAbsolutePath());
+        properties.put("appConfDir", appConfDir.getAbsolutePath());
+        properties.put("appLibDir", appLibDir.getAbsolutePath());
 
-        while (e.hasMoreElements()) {
-            String key = (String) e.nextElement();
-            System.out.println(key + " = " + System.getProperty(key));
-        }
+        properties.put("machineName", machineName);
+        properties.put("userName", userName);
 
-        System.out.println("ENV");
-        System.out.println("---------------");
-
-        for (Map.Entry<String, String> es : System.getenv().entrySet()) {
-            System.out.println(es.getKey() + " = " + es.getValue());
-        }
-
+        return properties;
     }
-
 }

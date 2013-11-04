@@ -71,7 +71,7 @@ public abstract class Tray {
             instance = new WindowsTray();
             return instance;
         } else if (env.getOperatingSystem() == Environment.OperatingSystem.Mac) {
-            instance = new LinuxTray();
+            instance = new WindowsTray();
             return instance;
         }
 

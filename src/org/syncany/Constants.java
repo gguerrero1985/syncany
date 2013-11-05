@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 public abstract class Constants {
     public static final String APPLICATION_NAME = "Syncany";
     public static final String APPLICATION_DONATE_URL = "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=gguerrero1985@gmail.com&item_name=Syncany&currency_code=EUR&lc=US&no_note=0";
-    public static final String APPLICATION_URL = "http://www.syncany.org/";
+    public static final String APPLICATION_URL = "https://github.com/ryanfox1985/syncany";
     public static final String APPLICATION_CRASHREPORT_URL = "http://api.syncany.org/crashreport.php";
     public static final String RESOURCE_BUNDLE = "org.syncany.i18n.I18n";
 

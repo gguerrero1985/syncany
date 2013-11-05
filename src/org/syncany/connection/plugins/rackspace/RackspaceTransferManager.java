@@ -38,7 +38,8 @@ import org.syncany.util.FileUtil;
  * @author oubou68, pheckel
  */
 public class RackspaceTransferManager extends AbstractTransferManager {
-    private static final String AUTH_URL = "https://auth.api.rackspacecloud.com/v1.0";
+    private static final String AUTH_URL_US = "https://auth.api.rackspacecloud.com/v1.0";
+    private static final String AUTH_URL_UK = "https://lon.auth.api.rackspacecloud.com/v1.0";
     private static final int CONNECTION_TIMEOUT = 5000;
     
     private FilesClient client;
@@ -47,7 +48,11 @@ public class RackspaceTransferManager extends AbstractTransferManager {
         super(connection);
         
         client = new FilesClient(connection.getUsername(), connection.getApiKey());
-        client.setAuthenticationURL(AUTH_URL);        
+        if(connection.getAuthServer().equals("US"))
+            client.setAuthenticationURL(AUTH_URL_US);
+        else
+            client.setAuthenticationURL(AUTH_URL_UK);
+        
         client.setConnectionTimeOut(CONNECTION_TIMEOUT);        
     }
 

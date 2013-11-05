@@ -35,6 +35,7 @@ import org.syncany.exceptions.ConfigException;
 public class RackspaceConnection implements Connection {
     private String username;
     private String apiKey;
+    private String authServer;
     private String container;
     private ResourceBundle resourceBundle;
 
@@ -66,6 +67,14 @@ public class RackspaceConnection implements Connection {
         this.apiKey = apiKey;
     }
 
+    public String getAuthServer() {
+        return authServer;
+    }
+    
+    public void setAuthServer(String authServer) {
+        this.authServer = authServer;
+    }
+    
     public String getContainer() {
         return container;
     }
@@ -87,6 +96,7 @@ public class RackspaceConnection implements Connection {
         // Mandatory
         username = node.getProperty("username");
         apiKey = node.getProperty("apikey");
+        authServer = node.getProperty("authServer");
         container = node.getProperty("container");
 
         if (username == null || apiKey == null || container == null) {
@@ -99,6 +109,7 @@ public class RackspaceConnection implements Connection {
         node.setAttribute("type", getPluginInfo().getId());
         node.setProperty("username", username);
         node.setProperty("apikey", apiKey);
+        node.setProperty("authServer", authServer);
         node.setProperty("container", container);
     }
     

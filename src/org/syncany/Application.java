@@ -94,29 +94,37 @@ import org.syncany.util.RollingChecksum;
 public class Application {
 
     private static final Logger logger = Logger.getLogger(Application.class.getSimpleName());
-
+    private static final Environment env = Environment.getInstance();
+    private Boolean startDemonOnly;
     private Config config;
     private Desktop desktop;
     private Indexer indexer;
     private LocalWatcher localWatcher;
     private Tray tray;
     private PeriodicTreeSearch periodic;
+    //private CacheCleaner cache;
     private SettingsDialog settingsDialog;
+    //private ConnectionTester connectionTester;
 
-    public Application() {
-        // Nothing.
+    public Application(Boolean startDemonOnly) {
+        this.startDemonOnly = startDemonOnly;
+        //this.connectionTester = new ConnectionTester(this);
     }
 
     public void start() throws InitializationException {
-        if (logger.isLoggable(Level.INFO)) {
-            logger.info("Starting Application ...");
-        }
+        logger.log(Level.INFO, "{0}#Starting Application daemon: {1} ...", new Object[]{env.getMachineName(), startDemonOnly});
 
         // Do NOT change the order of these method calls!
         // They strongly depend on each other.        
         initDependencies();
-        initUI();
+        if (!startDemonOnly) {
+            logger.log(Level.INFO, "{0}#Init UI...", env.getMachineName());
+            initUI();
+        }
 
+        //tray.setStartDemonOnly(startDemonOnly);
+        
+        
         // This is done in a thread, so the application can finish 
         // initializing. The profile stuff is separate from the rest!        
         new Thread(new Runnable() {

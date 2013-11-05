@@ -1,0 +1,11 @@
+org.syncany.Environment.java checked.
+org.syncany.Syncany.java checked.
+
+- Mirar las dlls de:
+https://github.com/liferay/liferay-nativity
+
+- Poner version.
+- Hacer instalador windows.
+- Arreglar bugs.
+- Refactors.
+

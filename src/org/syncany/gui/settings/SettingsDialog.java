@@ -472,7 +472,7 @@ public class SettingsDialog extends JFrame {
         }// </editor-fold>//GEN-END:initComponents
 
     private void lblDonateMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_lblDonateMouseClicked
-        FileUtil.browsePage(Constants.APPLICATION_URL);
+        FileUtil.browsePage(Constants.APPLICATION_DONATE_URL);
     }//GEN-LAST:event_lblDonateMouseClicked
 
     private void btnOkayActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnOkayActionPerformed

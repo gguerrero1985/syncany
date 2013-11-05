@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.syncany.gui.tray.windows;
+package org.syncany.gui.tray.platform;
 
 import java.io.File;
 import org.syncany.gui.tray.AbstractCommonTray;
@@ -24,7 +24,7 @@ import org.syncany.gui.tray.AbstractCommonTray;
  *
  * @author Philipp C. Heckel
  */
-public class WindowsTray extends AbstractCommonTray {
+public class Windows extends AbstractCommonTray {
     @Override
     public void notify(String summary, String body, File imageFile) {
         System.err.println("NOT IMPLEMENTED"); // TODO do this!

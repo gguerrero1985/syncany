@@ -51,11 +51,11 @@ public class Environment {
     private OperatingSystem operatingSystem;
     private String architecture;
 
-    private String defaultUserHome;
+    private final String defaultUserHome;
     private File defaultUserConfDir;
     private File defaultUserConfigFile;
 
-    private File appDir;
+    private final File appDir;
     private File appBinDir;
     private File appResDir;
     private File appConfDir;

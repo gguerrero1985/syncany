@@ -35,13 +35,13 @@ import org.syncany.config.Profile;
  * 
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
-public class PeriodicTreeSearch {
-    private static final Logger logger = Logger.getLogger(PeriodicTreeSearch.class.getSimpleName());    
+public class PTreeSearch {
+    private static final Logger logger = Logger.getLogger(PTreeSearch.class.getSimpleName());    
     private static final int SEARCH_INTERVAL = 60;
     
     private Thread worker;        
     
-    public PeriodicTreeSearch() {
+    public PTreeSearch() {
         // Nothing.
     }
 

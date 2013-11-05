@@ -35,7 +35,7 @@ import java.io.File;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.syncany.gui.wizard.WizardDialog;
-import org.syncany.periodic.PeriodicTreeSearch;
+import org.syncany.periodic.PTreeSearch;
 import org.syncany.util.FileUtil;
 import org.syncany.util.RollingChecksum;
 
@@ -101,7 +101,7 @@ public class Application {
     private Indexer indexer;
     private LocalWatcher localWatcher;
     private Tray tray;
-    private PeriodicTreeSearch periodic;
+    private PTreeSearch periodic;
     //private CacheCleaner cache;
     private SettingsDialog settingsDialog;
     //private ConnectionTester connectionTester;
@@ -122,8 +122,7 @@ public class Application {
             initUI();
         }
 
-        //tray.setStartDemonOnly(startDemonOnly);
-        
+        //tray.setStartDemonOnly(startDemonOnly);        
         
         // This is done in a thread, so the application can finish 
         // initializing. The profile stuff is separate from the rest!        
@@ -141,7 +140,7 @@ public class Application {
                 // Start the rest
                 indexer.start();
                 localWatcher.start();
-                //periodic.start();
+                periodic.start();
             }
         }, "InitProfiles").start();
     }
@@ -156,7 +155,7 @@ public class Application {
         indexer = Indexer.getInstance();
         localWatcher = LocalWatcher.getInstance();
         tray = Tray.getInstance();
-        periodic = new PeriodicTreeSearch();
+        periodic = new PTreeSearch();
     }
 
     private void doShutdown() {

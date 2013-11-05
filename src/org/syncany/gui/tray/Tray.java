@@ -20,17 +20,18 @@ package org.syncany.gui.tray;
 import org.syncany.config.Config;
 import org.syncany.Environment;
 import org.syncany.exceptions.InitializationException;
-import org.syncany.gui.tray.linux.LinuxTray;
-import org.syncany.gui.tray.windows.WindowsTray;
+import org.syncany.gui.tray.platform.Linux;
+import org.syncany.gui.tray.platform.Windows;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.syncany.gui.tray.platform.Mac;
 
 /**
  *
  * @author Philipp C. Heckel
+ * @author Guillermo Guerrero
  */
 public abstract class Tray {
 
@@ -44,10 +45,7 @@ public abstract class Tray {
     protected List<TrayEventListener> listeners;
 
     protected Tray() {
-        if (logger.isLoggable(Level.INFO)) {
-            logger.info("Creating tray ...");
-        }
-        
+        logger.info("Creating tray ...");        
         listeners = new ArrayList<TrayEventListener>();
     }
 
@@ -65,13 +63,13 @@ public abstract class Tray {
         }
 
         if (env.getOperatingSystem() == Environment.OperatingSystem.Linux) {
-            instance = new LinuxTray();
+            instance = new Linux();
             return instance;
         } else if (env.getOperatingSystem() == Environment.OperatingSystem.Windows) {
-            instance = new WindowsTray();
+            instance = new Windows();
             return instance;
         } else if (env.getOperatingSystem() == Environment.OperatingSystem.Mac) {
-            instance = new WindowsTray();
+            instance = new Mac();
             return instance;
         }
 

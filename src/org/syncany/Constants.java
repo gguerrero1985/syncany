@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
 /**
  *
  * @author Philipp C. Heckel
+ * @author Guillermo Guerrero
  */
 public abstract class Constants {
     public static final String APPLICATION_NAME = "Syncany";

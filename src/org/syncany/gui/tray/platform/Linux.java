@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.syncany.gui.tray.linux;
+package org.syncany.gui.tray.platform;
 
 import org.syncany.gui.linux.NotifyRequest;
 import org.syncany.gui.linux.UpdateMenuRequest;
@@ -36,12 +36,12 @@ import org.syncany.gui.tray.TrayEventListener;
  *
  * @author Philipp C. Heckel
  */
-public class LinuxTray extends Tray {
+public class Linux extends Tray {
     private LinuxNativeClient nativeClient;
     private boolean initialized = false;
     private StatusIcon cachedStatus = StatusIcon.DISCONNECTED;
     
-    public LinuxTray() {
+    public Linux() {
         super();	     
     }
 

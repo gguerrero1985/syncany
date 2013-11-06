@@ -17,7 +17,8 @@
  */
 package org.syncany.gui.linux;
 
-import org.apache.commons.lang.StringUtils;
+import com.google.gson.JsonObject;
+import java.util.Map;
 
 /**
  *
@@ -26,8 +27,24 @@ import org.apache.commons.lang.StringUtils;
 public class UpdateStatusTextRequest implements Request {
     private String status;
     
-    public UpdateStatusTextRequest(String status) {
-    	this.status = status;
+    public UpdateStatusTextRequest(Map<String, String> statusMap) {
+        String finalStatus = "";
+                
+        for(Map.Entry<String, String> entry: statusMap.entrySet()){
+            if( entry.getValue().length() > 0 ){
+                if(finalStatus.length() > 0){
+                    finalStatus += "\n";
+                } 
+                
+                finalStatus += entry.getKey() + " - " + entry.getValue();                
+            }
+        }
+        
+        if(finalStatus.length() > 0){
+            this.status = finalStatus;
+        } else{
+            this.status = "Everything is up to date";
+        }
     }
 
     public String getStatusText() {
@@ -36,8 +53,12 @@ public class UpdateStatusTextRequest implements Request {
 
     @Override
     public String toString() {
-        String eStatus = StringUtils.replaceChars(status, "\"", "\\\"");        
-        return "{\"request\":\"UpdateStatusTextRequest\",\"status\":\"" + eStatus + "\"}";
+        JsonObject obj = new JsonObject();       
+        
+        obj.addProperty("request", "UpdateStatusTextRequest");
+        obj.addProperty("status", this.status);        
+        
+        return obj.toString();
     }
 
     @Override

@@ -1,6 +1,17 @@
 org.syncany.Environment.java checked.
 org.syncany.Syncany.java checked.
 
+
+
+
+
+
+
+
+- Crear instaladores mac, windows, ubuntu
+http://www.centerkey.com/mac/java/
+http://stableupdate.sourceforge.net/
+
 - Mirar las dlls de:
 https://github.com/liferay/liferay-nativity
 

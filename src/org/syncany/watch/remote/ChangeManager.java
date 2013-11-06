@@ -20,7 +20,6 @@ package org.syncany.watch.remote;
 import java.io.IOException;
 import org.syncany.config.Config;
 import org.syncany.config.Profile;
-import org.syncany.connection.plugins.Connection;
 import org.syncany.connection.plugins.TransferManager;
 import org.syncany.db.CloneChunk;
 import org.syncany.db.CloneFile;
@@ -60,11 +59,12 @@ import org.syncany.repository.Uploader;
  * @author Philipp C. Heckel
  */
 public class ChangeManager {
+
     private static final Logger logger = Logger.getLogger(ChangeManager.class.getSimpleName());
     private static final int INTERVAL = 5000;
 
     // cp start()
-    private final DependencyQueue q;
+    private final DependencyQueue queue;
     private Profile profile;
     private Timer timer;
     private TransferManager transfer;
@@ -80,7 +80,7 @@ public class ChangeManager {
 
     public ChangeManager(Profile profile) {
         this.profile = profile;
-        this.q = new DependencyQueue();
+        this.queue = new DependencyQueue();
 
         // cmp. start()
         this.timer = null;
@@ -123,8 +123,8 @@ public class ChangeManager {
     }
 
     public void queueUpdates(UpdateList ul) {
-        synchronized (q) {
-            q.addAll(ul.generateUpdateList());
+        synchronized (queue) {
+            queue.addAll(ul.generateUpdateList());
         }
     }
 
@@ -136,20 +136,19 @@ public class ChangeManager {
         Update update = null;
         Map<Long, List<Update>> newUpdatesMap = new HashMap<Long, List<Update>>();
 
-        //q.printMaps();
-        boolean firedProcessingStartEvent = !q.isEmpty();
-
-        if (firedProcessingStartEvent) {
-            tray.setStatusIcon(Tray.StatusIcon.UPDATING);
+        synchronized (queue) {
+            //queue.setProcessingFile(true);
+            if (!queue.isEmpty()) {
+                tray.setStatusIcon(this.getClass().getSimpleName(), Tray.StatusIcon.UPDATING);
+            }
         }
 
-        while (null != (update = q.poll())) {
-            //logger.info("Processing update "+update+" ...");
+        while (null != (update = queue.poll())) {
+            logger.log(Level.INFO, "Processing update {0} ...", update);
 
             CloneFile existingVersion = db.getFileOrFolder(profile, update.getFileId(), update.getVersion());
 
             boolean isLocalConflict = isLocalConflict(existingVersion, update);
-
 
             ///Existing version equals update -> skip: file is up-to-date!
             if (existingVersion != null && !isLocalConflict) {
@@ -157,16 +156,14 @@ public class ChangeManager {
                 continue;
             }
 
-            
-            logger.info("- Processing update: " + update);
+            logger.log(Level.INFO, "- Processing update: {0}", update);
             if (!newUpdatesMap.containsKey(update.getFileId())) {
                 newUpdatesMap.put(update.getFileId(), new ArrayList<Update>());
             }
-            
+
             newUpdatesMap.get(update.getFileId()).add(update);
 
             ///// 3. Handle all possible cases
-
             CloneFile localVersionById = db.getFileOrFolder(profile, update.getFileId());
 
             // A) I know the file ID
@@ -175,22 +172,18 @@ public class ChangeManager {
                 if (isLocalConflict) {
                     logger.info("Aa) File ID " + update.getFileId() + " known, conflict found of " + existingVersion + " with updates " + update + ". Resolving conflict ...");
                     resolveConflict(existingVersion, update);
-                } 
-                        
-                /// b) No conflict exists (only apply new versions)
+                } /// b) No conflict exists (only apply new versions)
                 else {
                     logger.info("Ab) File ID " + update.getFileId() + " known. New update found. Applying ...");
                     applyUpdate(localVersionById, update);
                 }
-            } 
-            
-            // B) I do not know the file ID
+            } // B) I do not know the file ID
             else {
                 Folder root = profile.getFolders().get(update.getRootId());
 
                 if (root == null) {
                     // TODO given ROOT is unknown! 
-                    logger.severe("TODO TODO TODO  --- ROOT ID " + update.getRootId() + " is unknown. ");
+                    logger.log(Level.SEVERE, "TODO TODO TODO  --- ROOT ID {0} is unknown. ", update.getRootId());
                     continue;
                 }
 
@@ -201,32 +194,29 @@ public class ChangeManager {
                 if (localVersionByFilename == null) {
                     logger.log(Level.INFO, "Ba) File ID {0} NOT known. No conflicting filename found in DB. Applying updates of new file ...", update.getFileId());
                     applyUpdate(null, update);
-                } 
-                        
-                // b) Local file exists: 
+                } // b) Local file exists: 
                 //    If the checksum doesn't match, this is a conflict
                 //    If the checksum matches, the histories must be merged
                 else {
-                    logger.info("Bb) File ID " + update.getFileId() + " NOT known. Conflicting file (same file path) FOUND in DB: " + localVersionByFilename);
+                    logger.log(Level.INFO, "Bb) File ID {0} NOT known. Conflicting file (same file path) FOUND in DB: {1}", new Object[]{update.getFileId(), localVersionByFilename});
 
                     // Both cases: 
                     //   Winner is the client that started the file first (first version).
                     //   -> Compare first versions!
                     CloneFile localFirstVersion = localVersionByFilename.getFirstVersion();
                     CloneFile localLastVersion = localFirstVersion.getLastVersion();
-                    
+
                     Date remoteFirstUpdateDate;
-                    
+
                     if (update.getVersion() == 1) {
                         remoteFirstUpdateDate = update.getUpdated();
-                    }
-                    else {
+                    } else {
                         CloneFile remoteFirstVersion = db.getFileOrFolder(profile, update.getFileId(), 1);
-                        
+
                         if (remoteFirstVersion == null) {
-                            throw new RuntimeException("Inconsistent database. File "+update.getFileId()+", version 1 should exist in the DB.");
+                            throw new RuntimeException("Inconsistent database. File " + update.getFileId() + ", version 1 should exist in the DB.");
                         }
-                        
+
                         remoteFirstUpdateDate = remoteFirstVersion.getUpdated();
                     }
 
@@ -236,79 +226,75 @@ public class ChangeManager {
                     if (!localLastVersion.getFile().exists()) {
                         logger.warning("Bb) WARNING: Local file " + localLastVersion.getFile() + " does not exist. Indexer late?");
                         logger.warning("Bb) TODO TODO TODO -- re-add updates to the Q ...");
-                        
+
                         indexer.queueDeleted(root, localLastVersion.getFile());
-                        
-                        try { Thread.sleep(1000); }
-                        catch (InterruptedException e) { }
-                        
-                        q.add(update);
+
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                        }
+
+                        queue.add(update);
                         continue;
                     }
 
                     // i) Checksum equals: Merge the histories; the loser adds a MERGED to his history.
                     if (localVersionByFilename.getChecksum() == update.getChecksum()) {
                         CloneFile updateVersion = addToDB(update);
-                        
+
                         // 1) Local client won (other client must give up his history):
                         //    If there is not MERGED version yet, add MERGED version to remote history
                         if (isLocalWinner) {
                             updateVersion.setSyncStatus(SyncStatus.UPTODATE);
                             updateVersion.merge();
-                         /*   // a) Last update version is a MERGED version, do nothing (but add it to the DB)
-                            if (update.getStatus() == Status.MERGED) {
-                                logger.info("Bbi1a) Local file has same checksum, but last update is a MERGED version. Adding to DB.");
-                                addToDB(update);
-                            } 
+                            /*   // a) Last update version is a MERGED version, do nothing (but add it to the DB)
+                             if (update.getStatus() == Status.MERGED) {
+                             logger.info("Bbi1a) Local file has same checksum, but last update is a MERGED version. Adding to DB.");
+                             addToDB(update);
+                             } 
                             
-                            // b) Merge REMOTE version with my local one.
-                            else {
-                                logger.info("Bbi1b) Local file has same checksum, MERGING histories. Local version WINS ... ");
+                             // b) Merge REMOTE version with my local one.
+                             else {
+                             logger.info("Bbi1b) Local file has same checksum, MERGING histories. Local version WINS ... ");
 
-                                // Add updates to DB
-                                CloneFile remoteLastVersion = addToDB(update);
+                             // Add updates to DB
+                             CloneFile remoteLastVersion = addToDB(update);
 
-                                // Add remote 'merged' version			    
-                                CloneFile remoteMergeVersion = (CloneFile) remoteLastVersion.clone();
-                                remoteMergeVersion.setVersion(remoteLastVersion.getVersion() + 1);
-                                remoteMergeVersion.setStatus(Status.MERGED);
-                                remoteMergeVersion.setSyncStatus(SyncStatus.UPTODATE);
-                                remoteMergeVersion.setMergedTo(localLastVersion);                                
-                                remoteMergeVersion.updateVersionId();
-                                remoteMergeVersion.persist();
-                            }*/
-                        } 
-                                
-                        // 2) Local client lost (must give up his history): add MERGED version to local history
+                             // Add remote 'merged' version			    
+                             CloneFile remoteMergeVersion = (CloneFile) remoteLastVersion.clone();
+                             remoteMergeVersion.setVersion(remoteLastVersion.getVersion() + 1);
+                             remoteMergeVersion.setStatus(Status.MERGED);
+                             remoteMergeVersion.setSyncStatus(SyncStatus.UPTODATE);
+                             remoteMergeVersion.setMergedTo(localLastVersion);                                
+                             remoteMergeVersion.updateVersionId();
+                             remoteMergeVersion.persist();
+                             }*/
+                        } // 2) Local client lost (must give up his history): add MERGED version to local history
                         else {
                             // a) Last update version is a MERGED version, do nothing (but add it to the DB)
                             if (update.getStatus() == Status.MERGED) {
                                 logger.info("Bbi2a) Local file has same checksum, but last update is a MERGED version. Adding to DB.");
                                 //addToDB(update);
                                 updateVersion.persist();
-                            } 
-                            
-                            // b) Merge local version with the remote one
+                            } // b) Merge local version with the remote one
                             else {
                                 logger.info("Bbi2) Local file has same checksum, MERGING histories. Local version LOSES ... ");
 
                                 // Add updates to DB
                                 //CloneFile remoteLastVersion = addToDB(update);
                                 updateVersion.setSyncStatus(SyncStatus.UPTODATE);
-                                
+
                                 // Add local 'merged' version			    
                                 CloneFile localMergeVersion = (CloneFile) localLastVersion.clone();
                                 localMergeVersion.setVersion(localLastVersion.getVersion() + 1);
                                 localMergeVersion.setStatus(Status.MERGED);
                                 localMergeVersion.setSyncStatus(SyncStatus.UPTODATE);
                                 localMergeVersion.setMergedTo(updateVersion);
-                                
+
                                 db.merge(updateVersion, localMergeVersion);
                             }
                         }
-                    } 
-                            
-                    // ii) Checksum not equal: Conflict; the loser moves his file to a "conflicted copy" version
+                    } // ii) Checksum not equal: Conflict; the loser moves his file to a "conflicted copy" version
                     else {
                         // 1) Local client won: do nothing?
                         if (isLocalWinner) {
@@ -336,14 +322,12 @@ public class ChangeManager {
                                 continue;
                             }
 
-
                             //// Add remote 'conflicted' version			    
-
                             // Name
                             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
 
-                            String newFileName =
-                                    FileUtil.getBasename(remoteLastVersion.getName())
+                            String newFileName
+                                    = FileUtil.getBasename(remoteLastVersion.getName())
                                     + " (" + update.getClientName()
                                     + (update.getClientName().endsWith("s") ? "'" : "'s")
                                     + " conflicting copy, "
@@ -360,7 +344,7 @@ public class ChangeManager {
                             remoteConflictVersion.persist();
 
                             // File system
-                            logger.info("Rename temp file to " + remoteLastVersion.getFile() + " ...");
+                            logger.log(Level.INFO, "Rename temp file to {0} ...", remoteLastVersion.getFile());
                             tempLosingFile.renameTo(remoteConflictVersion.getFile());
 
                             // Update DB
@@ -369,10 +353,7 @@ public class ChangeManager {
                             // Notify uploader
                             uploader.queue(remoteConflictVersion);
 
-
-                        }
-                                
-                        // 2) Local client lost: adjust history and move to "conflicted copy" version
+                        } // 2) Local client lost: adjust history and move to "conflicted copy" version
                         else {
                             logger.info("Bbii2) Local file has NOT the same checksum. Local version LOSES. Making 'conflicted copy' version ... ");
 
@@ -398,16 +379,12 @@ public class ChangeManager {
                                 continue;
                             }
 
-
-
-
                             //// Add local 'conflicted' version			    
-
                             // Name
                             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
 
-                            String newFileName =
-                                    FileUtil.getBasename(localLastVersion.getName())
+                            String newFileName
+                                    = FileUtil.getBasename(localLastVersion.getName())
                                     + " (" + config.getMachineName()
                                     + (config.getMachineName().endsWith("s") ? "'" : "'s")
                                     + " conflicting copy, "
@@ -437,9 +414,14 @@ public class ChangeManager {
             }
         }
 
+        synchronized (queue) {
+            //queue.setProcessingFile(false);
+        }
+
         // Q empty!!
-        tray.setStatusIcon(Tray.StatusIcon.UPTODATE);
-        
+        tray.setStatusIcon(this.getClass().getSimpleName(), Tray.StatusIcon.UPTODATE);
+        tray.setStatusText(this.getClass().getSimpleName(), "");
+
         if (!newUpdatesMap.isEmpty()) {
             showNotification(newUpdatesMap);
         }
@@ -458,7 +440,7 @@ public class ChangeManager {
             applyRenameOnlyChanges(lastMatchingVersion, newFileUpdate);
             return;
         }
- 
+
         // c) Simply delete the last file
         if (newFileUpdate.getStatus() == Status.DELETED) {
             applyDeleteChanges(lastMatchingVersion, newFileUpdate);
@@ -471,38 +453,37 @@ public class ChangeManager {
         return;
 
         /*
-        // Make DB entry
-        CloneFile newVersion = db.createFile(profile, update);
-        newUpdatesMap.get(newVersion.getFileId()).add(newVersion);
+         // Make DB entry
+         CloneFile newVersion = db.createFile(profile, update);
+         newUpdatesMap.get(newVersion.getFileId()).add(newVersion);
         
-        // The last of this file id: perform changes!
-        if (q.getMaxVersion(newVersion.getFileId()) == null) { // no file version left -> null!
-        CloneFile localVersion = lastMatchingLocalVersionMap.get(newVersion.getFileId());
-        List<CloneFile> newVersions = newUpdatesMap.get(newVersion.getFileId());
+         // The last of this file id: perform changes!
+         if (q.getMaxVersion(newVersion.getFileId()) == null) { // no file version left -> null!
+         CloneFile localVersion = lastMatchingLocalVersionMap.get(newVersion.getFileId());
+         List<CloneFile> newVersions = newUpdatesMap.get(newVersion.getFileId());
         
-        try {
-        applyChanges(localVersion, newVersions);
-        }
-        catch (CouldNotApplyUpdateException e) {
-        logger.warning("Could not apply update "+update+". Re-adding to Queue ...");
-        q.add(update);
-        continue;
-        }
+         try {
+         applyChanges(localVersion, newVersions);
+         }
+         catch (CouldNotApplyUpdateException e) {
+         logger.warning("Could not apply update "+update+". Re-adding to Queue ...");
+         q.add(update);
+         continue;
+         }
         
-        newVersion.setSyncStatus(CloneFile.SyncStatus.UPTODATE);
-        addToDB(newVersion);
+         newVersion.setSyncStatus(CloneFile.SyncStatus.UPTODATE);
+         addToDB(newVersion);
         
-        fireLocalFileStatusChanged(newVersion);
-        }
+         fireLocalFileStatusChanged(newVersion);
+         }
         
-        // Not the last one: Just add to DB
-        else {
-        newVersion.setSyncStatus(CloneFile.SyncStatus.UPTODATE);
-        addToDB(newVersion);
-        }
+         // Not the last one: Just add to DB
+         else {
+         newVersion.setSyncStatus(CloneFile.SyncStatus.UPTODATE);
+         addToDB(newVersion);
+         }
         
          */
-
     }
 
     private void resolveConflict(CloneFile firstConflictingVersion, Update conflictUpdate) {
@@ -528,8 +509,8 @@ public class ChangeManager {
             CloneFile cfclone = (CloneFile) cf.clone();
 
             // New filename
-            String newFileName =
-                    FileUtil.getBasename(cf.getName())
+            String newFileName
+                    = FileUtil.getBasename(cf.getName())
                     + " (" + config.getMachineName()
                     + (config.getMachineName().endsWith("s") ? "'" : "'s")
                     + " conflicting copy, "
@@ -555,7 +536,6 @@ public class ChangeManager {
         em.flush();
         em.getTransaction().commit();
 
-
         ///// B. Rename last local file to 'conflicting copy'	
         logger.info("resolveConflict: B. Renaming local file " + oldConflictingLocalFile + " to " + newConflictingLocalFile);
         FileUtil.renameVia(oldConflictingLocalFile, newConflictingLocalFile.getFile());
@@ -566,7 +546,6 @@ public class ChangeManager {
         ///// C. Add updates to DB	
         logger.info("resolveConflict: C. Adding updates to DB: " + conflictUpdate);
         CloneFile winningVersion = addToDB(conflictUpdate);
-
 
         ///// D. Create 'winning' file
         logger.info("resolveConflict: D. Create/Download winning file ...");
@@ -604,25 +583,26 @@ public class ChangeManager {
 
     private void applyMergeChanges(Update newFileUpdate) {
         logger.info("- ChangeManager: Merge-history: adding updates to DB (that's it!) ...");
-        
-        CloneFile updateVersion = addToDB(newFileUpdate);        
+
+        CloneFile updateVersion = addToDB(newFileUpdate);
         updateSyncStatus(updateVersion, SyncStatus.UPTODATE);
     }
 
     /**
-     * 
-     * <p>Note: files and folders are handled the same (in this case!). When
+     *
+     * <p>
+     * Note: files and folders are handled the same (in this case!). When
      * updating this method, make sure to check if it works for both!
-     * 
+     *
      * @param lastMatchingVersion
-     * @param newFileUpdates 
+     * @param newFileUpdates
      */
     private void applyRenameOnlyChanges(CloneFile lastMatchingVersion, Update newFileUpdate) {
         if (!lastMatchingVersion.getFile().exists()) {
             if (logger.isLoggable(Level.WARNING)) {
                 logger.log(Level.WARNING, "Error while renaming file {0}v{1}: {2} does NOT exist; Trying to download the file ...", new Object[]{lastMatchingVersion.getFileId(), lastMatchingVersion.getVersion(), lastMatchingVersion.getRelativePath()});
             }
-            
+
             applyChangeOrNew(lastMatchingVersion, newFileUpdate);
             return;
         }
@@ -674,12 +654,13 @@ public class ChangeManager {
     }
 
     /**
-     * 
-     * <p>Note: files and folders are handled the same (in this case!). When
+     *
+     * <p>
+     * Note: files and folders are handled the same (in this case!). When
      * updating this method, make sure to check if it works for both!
-     * 
+     *
      * @param lastMatchingVersion
-     * @param newFileUpdates 
+     * @param newFileUpdates
      */
     private void applyDeleteChanges(CloneFile lastMatchingVersion, Update newFileUpdate) {
         logger.info("Deleting " + newFileUpdate.getName());
@@ -710,25 +691,21 @@ public class ChangeManager {
     }
 
     /**
-     * Steps:
-     *  A. add new updates to DB
-     * 
-     *  if (isFolder):
-     *      B. make folder to tempfile
-     * 
-     *  if (isFile):
-     *      C. download chunks for the last update
-     *      D. assemble chunks to tempfile
-     * 
-     *  if (local version exists):
-     *      E. delete the local version
-     * 
-     *  F. move temp file to last update.
-     * 
-     * 
+     * Steps: A. add new updates to DB
+     *
+     * if (isFolder): B. make folder to tempfile
+     *
+     * if (isFile): C. download chunks for the last update D. assemble chunks to
+     * tempfile
+     *
+     * if (local version exists): E. delete the local version
+     *
+     * F. move temp file to last update.
+     *
+     *
      * @param lastMatchingVersion
      * @param newFileUpdates
-     * @throws CouldNotApplyUpdateException 
+     * @throws CouldNotApplyUpdateException
      */
     private void applyChangeOrNew(CloneFile lastMatchingVersion, Update newFileUpdate) {
         ///// A. Add to DB
@@ -754,13 +731,10 @@ public class ChangeManager {
         FileUtil.deleteRecursively(tempNewFile); // just in case!
         FileUtil.deleteRecursively(tempDeleteFile); // just in case!
 
-
         ///// B. Make folder
         if (newestVersion.isFolder()) {
             tempNewFile.mkdirs();
-        }
-        
-        ///// C+D. Download and assemble file
+        } ///// C+D. Download and assemble file
         else {
             try {
                 downloadChunks(newestVersion);
@@ -782,7 +756,6 @@ public class ChangeManager {
         tempNewFile.setLastModified(newestVersion.getLastModified().getTime());
         tempNewFile.renameTo(newestVersion.getFile());
         FileUtil.deleteRecursively(tempNewFile);
-
 
         // Update DB
         updateSyncStatus(newestVersion, SyncStatus.UPTODATE);
@@ -814,10 +787,10 @@ public class ChangeManager {
                 // Change DB state of chunk
                 //chunk.setCacheStatus(CacheStatus.CACHED);
                 /*
-                em.getTransaction().begin();
-                em.merge(chunk);
-                em.flush();
-                em.getTransaction().commit();*/
+                 em.getTransaction().begin();
+                 em.merge(chunk);
+                 em.flush();
+                 em.getTransaction().commit();*/
             } catch (StorageException e) {
                 if (logger.isLoggable(Level.WARNING)) {
                     logger.log(Level.WARNING, "- ERR: Chunk " + chunk + " not found (or something else)", e);
@@ -836,7 +809,6 @@ public class ChangeManager {
         if (logger.isLoggable(Level.INFO)) {
             logger.info("- File " + file.getRelativePath() + " downloaded; Assembling ...");
         }
-
 
     }
 
@@ -882,51 +854,49 @@ public class ChangeManager {
     private boolean isLocalConflict(CloneFile existingVersion, Update update) {
         // Test different positive cases.
         // Please note, that the order of the IF-tests is important!
-        
+
         if (existingVersion == null) {
             return false;
         }
-        
+
         if (existingVersion.getStatus() == Status.DELETED && update.getStatus() == Status.DELETED) {
             return false;
         }
-        
+
         if (existingVersion.getStatus() == Status.MERGED && update.getStatus() == Status.MERGED
-                && existingVersion.getMergedTo() != null 
+                && existingVersion.getMergedTo() != null
                 && existingVersion.getMergedTo().getFileId().equals(update.getMergedFileId())) {
-            
-            return false;            
-        }
-        
-        if (existingVersion.getStatus() == Status.RENAMED && update.getStatus() == Status.RENAMED
-                && existingVersion.getPath().equals(update.getPath()) 
-                && existingVersion.getName().equals(update.getName())) {
-            
+
             return false;
         }
-        
+
+        if (existingVersion.getStatus() == Status.RENAMED && update.getStatus() == Status.RENAMED
+                && existingVersion.getPath().equals(update.getPath())
+                && existingVersion.getName().equals(update.getName())) {
+
+            return false;
+        }
+
         if (existingVersion.getStatus() == Status.NEW && update.getStatus() == Status.NEW
                 && existingVersion.getFileSize() == update.getFileSize()
                 && existingVersion.getChecksum() == update.getChecksum()
-                && existingVersion.getPath().equals(update.getPath()) 
+                && existingVersion.getPath().equals(update.getPath())
                 && existingVersion.getName().equals(update.getName())) {
-            
+
             return false;
-        }        
-        
+        }
+
         if (existingVersion.getStatus() == Status.CHANGED && update.getStatus() == Status.CHANGED
                 && existingVersion.getFileSize() == update.getFileSize()
                 && existingVersion.getChecksum() == update.getChecksum()
-                && existingVersion.getPath().equals(update.getPath()) 
+                && existingVersion.getPath().equals(update.getPath())
                 && existingVersion.getName().equals(update.getName())) {
-            
+
             return false;
-        }        
-      
-        
+        }
+
         // Okay, from this point on, we DO have a conflict.
         // Now we have to decide whether to care about it or not.
-
         // If we were first, the remote client has to fix it!
         if (existingVersion.getUpdated().before(update.getUpdated())) {
             logger.info("- Nothing to resolve. I win. Local version " + existingVersion + " is older than update " + update);
@@ -944,7 +914,7 @@ public class ChangeManager {
     }
 
     public void showNotification(Map<Long, List<Update>> appliedUpdates) {
-        tray.setStatusIcon(Tray.StatusIcon.UPTODATE);
+        tray.setStatusIcon(this.getClass().getSimpleName(), Tray.StatusIcon.UPTODATE);
 
         // Skip notification
         if (appliedUpdates.isEmpty()) {

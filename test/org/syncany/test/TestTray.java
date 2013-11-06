@@ -24,6 +24,7 @@ import org.syncany.gui.tray.Tray;
 import org.syncany.gui.tray.TrayEvent;
 import org.syncany.gui.tray.TrayEventListener;
 import java.io.FileNotFoundException;
+import static org.syncany.gui.linux.LinuxNativeClient.getInstance;
 
 /**
  *
@@ -35,7 +36,7 @@ public class TestTray {
 	
     Tray tray = Tray.getInstance();
 
-    tray.init();
+    tray.init("Everything is up to date.");
     tray.addTrayEventListener(new TrayEventListener() {
 
         @Override
@@ -47,10 +48,10 @@ public class TestTray {
     while (true) {
         tray.notify("Test notification", "blabblkablbfldsfdslfkj hsfkjhsf sfkjshf skdjfhs df", null);
         System.out.println("test");
-        tray.setStatusIcon(Tray.StatusIcon.UPDATING);
+        tray.setStatusIcon(getInstance().getClass().getSimpleName(), Tray.StatusIcon.UPDATING);
         Thread.sleep(5000);
-
-        tray.setStatusIcon(Tray.StatusIcon.UPTODATE);
+        
+        tray.setStatusIcon(getInstance().getClass().getSimpleName(), Tray.StatusIcon.UPTODATE);        
         Thread.sleep(5000);
     }
 

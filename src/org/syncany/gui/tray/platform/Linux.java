@@ -35,18 +35,18 @@ import org.syncany.gui.tray.TrayEventListener;
 /**
  *
  * @author Philipp C. Heckel
+ * @author Guillermo Guerrero
  */
 public class Linux extends Tray {
     private LinuxNativeClient nativeClient;
-    private boolean initialized = false;
-    private StatusIcon cachedStatus = StatusIcon.DISCONNECTED;
+    private boolean initialized = false;    
     
     public Linux() {
         super();	     
     }
 
     @Override
-    public void init() throws InitializationException {
+    public void init(String initialMessage) throws InitializationException {
         nativeClient = LinuxNativeClient.getInstance();
         nativeClient.init();
         addListener();
@@ -57,55 +57,28 @@ public class Linux extends Tray {
 
     @Override
     public synchronized void destroy() {
-        nativeClient.destroy();
-    }
-
-    @Override
-    public void setStatusText(String msg) {
         if (!initialized) {
-            if (logger.isLoggable(Level.WARNING)) {
-                logger.warning("Cannot update status. Tray not initialized yet.");                
-            }
-            
+            logger.log(Level.WARNING, "{0}#Cannot destroy. Tray not initialized yet.", config.getMachineName());                
             return;
         }
         
-        nativeClient.send(new UpdateStatusTextRequest(msg));
+        nativeClient.destroy();        
     }
     
     @Override
-    public StatusIcon setStatusIcon(StatusIcon status) {
+    public void setStatusIconPlatform(StatusIcon status) {
         if (!initialized) {
-            if (logger.isLoggable(Level.WARNING)) {
-                logger.warning("Cannot change icon. Tray not initialized yet.");                
-            }
-            
-            return StatusIcon.DISCONNECTED;
+            logger.log(Level.CONFIG, "{0}#Cannot change icon. Tray not initialized yet.", config.getMachineName());                
+            return;
         }
-
-        if (cachedStatus != null && cachedStatus == status) {
-            // Nothing to send!
-            return cachedStatus;
-        }
-        
+                
         nativeClient.send(new UpdateStatusIconRequest(status));
-
-        cachedStatus = status;
-        return cachedStatus;
-    }
-    
-    @Override
-    public StatusIcon getStatusIcon() {
-        return cachedStatus;
     }    
 
     @Override
     public void notify(String summary, String body, File imageFile) {
         if (!initialized) {
-            if (logger.isLoggable(Level.WARNING)) {
-                logger.warning("Cannot send notification. Tray not initialized yet.");                
-            }
-            
+            logger.log(Level.WARNING, "{0}#Cannot send notification. Tray not initialized yet.", config.getMachineName());                
             return;
         }
 	
@@ -115,15 +88,25 @@ public class Linux extends Tray {
     @Override
     public void updateUI() {
         if (!initialized) {
-            if (logger.isLoggable(Level.WARNING)) {
-                logger.warning("Cannot update tray menu. Tray not initialized yet.");                
-            }
-            
+            logger.log(Level.WARNING, "{0}#Cannot update tray menu. Tray not initialized yet.", config.getMachineName());                
             return;
         }
 
-        nativeClient.send(new UpdateMenuRequest(config.getProfiles().list()));
+        UpdateMenuRequest menu = new UpdateMenuRequest(config.getProfiles().list());       
+        nativeClient.send(menu);
     }
+    
+    @Override
+    public void updateStatusText() {
+        if (!initialized) {
+            logger.log(Level.WARNING, "{0}#Cannot update status. Tray not initialized yet.", config.getUserName());                
+            return;
+        }
+        
+        UpdateStatusTextRequest menu = new UpdateStatusTextRequest(processesText);
+        nativeClient.send(menu);
+    }
+    
     
     public static void main(String[] args) throws ConfigException, InitializationException, InterruptedException {
         System.out.println("STARTED");
@@ -131,15 +114,19 @@ public class Linux extends Tray {
         //for (Entry<Object, Object> entry : System.getProperties().entrySet()) 
           //  System.out.println(entry.getKey() + " = "+entry.getValue());
 
-
-
         config.load();
         Tray tray = Tray.getInstance();
+        tray.registerProcess(tray.getInstance().getClass().getSimpleName());
+        tray.init("Everything is up to date.");
 
-        tray.init();
-
-        tray.notify("hallo", "test", null);
-        //tray.setStatus(Status.UPDATING);
+        tray.notify("hello", "test", null);
+        tray.setStatusIcon(tray.getInstance().getClass().getSimpleName(), StatusIcon.UPDATING);
+        tray.setStatusText(tray.getInstance().getClass().getSimpleName(), "hello!");
+        
+        
+        Thread.sleep(1000);
+        tray.setStatusIcon(tray.getInstance().getClass().getSimpleName(), StatusIcon.UPTODATE);
+        
         tray.addTrayEventListener(new TrayEventListener() {
 
             @Override
@@ -147,11 +134,12 @@ public class Linux extends Tray {
             System.out.println(event);
             }
         });
-        tray.setStatusIcon(StatusIcon.UPDATING);
+        
         //System.out.println(FileUtil.showBrowseDirectoryDialog());
 
-        while(true)
+        while(true) {
             Thread.sleep(1000);
+        }
 	
     }
 

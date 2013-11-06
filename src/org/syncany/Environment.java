@@ -98,13 +98,13 @@ public class Environment {
     private Environment() {
         String homePath;
         // Check must-haves
-        if (System.getProperty("stacksync.home") == null) {
+        if (System.getProperty("syncany.home") == null) {
             homePath = getDefaultUserDir();
         } else {
-            homePath = System.getProperty("stacksync.home");
+            homePath = System.getProperty("syncany.home");
             File tryPath = new File(homePath);
             if (!tryPath.exists()) {
-                throw new RuntimeException("Property 'stacksync.home' must be set.");
+                throw new RuntimeException("Property 'syncany.home' must be set.");
             }
         }
 

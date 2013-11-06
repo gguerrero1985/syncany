@@ -188,7 +188,7 @@ public class Application {
         }
 
         // Tray
-        tray.init();
+        tray.init("Everything is up to date.");
         tray.addTrayEventListener(new TrayEventListenerImpl());
         tray.updateUI();
 

@@ -39,7 +39,7 @@ public class TestEnvironment {
         }
 
         System.out.println("---------------");
-        System.out.println("Stacksync ENV");
+        System.out.println("Syncany ENV");
         System.out.println("---------------");
 
         for (Map.Entry<String, String> es : Environment.getInstance().getProperties().entrySet()) {

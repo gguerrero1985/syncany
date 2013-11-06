@@ -45,7 +45,7 @@ public class Syncany {
 
     private static void showHelp(Options options) {
         HelpFormatter h = new HelpFormatter();
-        h.printHelp("java -jar Stacksync.jar", options);
+        h.printHelp("java -jar Syncany.jar", options);
         System.exit(0);
     }
 
@@ -53,8 +53,8 @@ public class Syncany {
         // create the Options
         Options options = new Options();
 
-        options.addOption("d", "daemon", false, "To use Stacksync with a daemon only.");
-        options.addOption("c", "config", true, "Alternative path o config.xml file (Default: ~/.stacksync)");
+        options.addOption("d", "daemon", false, "To use Syncany with a daemon only.");
+        options.addOption("c", "config", true, "Alternative path o config.xml file (Default: ~/.syncany)");
         options.addOption("h", "help", false, "Print this message.");
 
         return options;
@@ -133,8 +133,8 @@ public class Syncany {
 
         // Start app!
         try {
-            Application appStacksync = new Application(startDemonOnly);
-            appStacksync.start();
+            Application app = new Application(startDemonOnly);
+            app.start();
         } catch (InitializationException e) {
             if (startDemonOnly) {
                 System.err.println("ERROR: " + e.getMessage());

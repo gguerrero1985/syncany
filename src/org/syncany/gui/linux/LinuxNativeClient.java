@@ -198,16 +198,16 @@ public class LinuxNativeClient {
             
             
             
-            tray.init();
-            tray.notify("Syncany", "Sending my regards", new File("/home/pheckel/Coding/syncany/syncany/res/logo48.png"));
+            tray.init("Everything is up to date.");
+            tray.notify("Stacksync", "Sending my regards", new File("/home/pheckel/Coding/stacksync/stacksync/res/logo48.png"));
             Thread.sleep(1000);
-            tray.setStatusIcon(StatusIcon.UPDATING);
+            tray.setStatusIcon(getInstance().getClass().getSimpleName(), StatusIcon.UPDATING);
             Thread.sleep(1000);
-            tray.setStatusIcon(StatusIcon.UPTODATE);
+            tray.setStatusIcon(getInstance().getClass().getSimpleName(), StatusIcon.DISCONNECTED);
             Thread.sleep(1000);
-            tray.setStatusIcon(StatusIcon.UPDATING);
+            tray.setStatusIcon(getInstance().getClass().getSimpleName(), StatusIcon.UPDATING);
             Thread.sleep(1000);
-            tray.setStatusIcon(StatusIcon.UPTODATE);
+            tray.setStatusIcon(getInstance().getClass().getSimpleName(), StatusIcon.UPTODATE);
             Thread.sleep(1000);
             tray.updateUI();
             
@@ -215,13 +215,13 @@ public class LinuxNativeClient {
             while(true) {
                 Thread.sleep(1000);
 
-                tray.setStatusText(resourceBundle.getString("lnc_downloading_files") + " 1/20 ...");
+                tray.setStatusText(getInstance().getClass().getSimpleName(), resourceBundle.getString("lnc_downloading_files") + " 1/20 ...");
                 Thread.sleep(1000);
-                tray.setStatusText(resourceBundle.getString("lnc_downloading_files") + " 2/20 ...");
+                tray.setStatusText(getInstance().getClass().getSimpleName(), resourceBundle.getString("lnc_downloading_files") + " 2/20 ...");
                 Thread.sleep(1000);
-                tray.setStatusText(resourceBundle.getString("lnc_downloading_files") + " 3/20 ...");
+                tray.setStatusText(getInstance().getClass().getSimpleName(), resourceBundle.getString("lnc_downloading_files") + " 3/20 ...");
                 Thread.sleep(1000);
-                tray.setStatusText(resourceBundle.getString("lnc_downloading_files") + " 4/20 ...");
+                tray.setStatusText(getInstance().getClass().getSimpleName(), resourceBundle.getString("lnc_downloading_files") + " 4/20 ...");
 
                 Thread.sleep(1000);
             

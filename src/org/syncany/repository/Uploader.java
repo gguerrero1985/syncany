@@ -37,20 +37,21 @@ import java.util.logging.Logger;
 import org.syncany.gui.tray.Tray;
 
 /**
- * Represents the remote storage.
- * Processes upload and download requests asynchonously.
+ * Represents the remote storage. Processes upload and download requests
+ * asynchonously.
  *
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
 public class Uploader {
+
     private static final int CACHE_FILE_LIST = 60000;
-    
+
     private static final Config config = Config.getInstance();
     private static final Logger logger = Logger.getLogger(Uploader.class.getSimpleName());
     private static final Tray tray = Tray.getInstance();
-    private static final Desktop desktop = Desktop.getInstance();    
+    private static final Desktop desktop = Desktop.getInstance();
     private static final DatabaseHelper db = DatabaseHelper.getInstance();
-    
+
     private Profile profile;
     private TransferManager transfer;
     private BlockingQueue<CloneFile> queue;
@@ -58,7 +59,7 @@ public class Uploader {
 
     private Map<String, RemoteFile> fileList;
     private Date cacheLastUpdate;
-    
+
     public Uploader(Profile profile) {
         this.profile = profile;
         this.queue = new LinkedBlockingQueue<CloneFile>();
@@ -67,18 +68,20 @@ public class Uploader {
     }
 
     public synchronized void start() {
-        if (worker != null)
+        if (worker != null) {
             return;
+        }
 
         transfer = profile.getRepository().getConnection().createTransferManager();
-        
-        worker = new Thread(new Worker(), "UploaderWorker");        
+
+        worker = new Thread(new Worker(), "UploaderWorker");
         worker.start();
     }
 
     public synchronized void stop() {
-        if (worker == null || worker.isInterrupted())
+        if (worker == null || worker.isInterrupted()) {
             return;
+        }
 
         worker.interrupt();
         worker = null;
@@ -87,35 +90,37 @@ public class Uploader {
     public void queue(CloneFile file) {
         try {
             queue.put(file);
-        }
-        catch (InterruptedException ex) {
+        } catch (InterruptedException ex) {
             logger.log(Level.SEVERE, null, ex);
         }
     }
 
     private class Worker implements Runnable {
+
         @Override
         public void run() {
             try {
                 CloneFile file;
 
                 while (null != (file = queue.take())) {
+                    tray.setStatusIcon(this.getClass().getDeclaringClass().getSimpleName(), Tray.StatusIcon.UPDATING);
+                    tray.setStatusText(this.getClass().getDeclaringClass().getSimpleName(), "Uploading " + (queue.size() + 1) + " files...");
+
                     processRequest(file);
+
+                    if (queue.isEmpty()) {
+                        tray.setStatusIcon(this.getClass().getDeclaringClass().getSimpleName(), Tray.StatusIcon.UPTODATE);
+                        tray.setStatusText(this.getClass().getDeclaringClass().getSimpleName(), "");
+                    }
                 }
-            }
-            catch (InterruptedException iex) {
-                iex.printStackTrace();
+            } catch (InterruptedException iex) {
+                logger.log(Level.SEVERE, "{0}#Exception {1}", new Object[]{config.getMachineName(), iex.getMessage()});
             }
         }
 
         private void processRequest(CloneFile file) {
-            if (tray.getStatusIcon() != Tray.StatusIcon.UPDATING) {
-                tray.setStatusIcon(Tray.StatusIcon.UPDATING);
-            }
-
-            if (logger.isLoggable(Level.INFO)) {
-                logger.log(Level.INFO, "UploadManager: Uploading file {0} ...", file.getFileName());
-            }
+            tray.setStatusIcon(this.getClass().getDeclaringClass().getSimpleName(), Tray.StatusIcon.UPDATING);
+            logger.log(Level.INFO, "UploadManager: Uploading file {0} ...", file.getFileName());
 
             // Update DB sync status
             if (!file.isFolder()) {
@@ -126,25 +131,22 @@ public class Uploader {
             }
 
             // Get file list (to check if chunks already exist)
-            if (cacheLastUpdate == null || fileList == null 
-                    || System.currentTimeMillis()-cacheLastUpdate.getTime() > CACHE_FILE_LIST) {
-                
-                try { 
+            if (cacheLastUpdate == null || fileList == null
+                    || System.currentTimeMillis() - cacheLastUpdate.getTime() > CACHE_FILE_LIST) {
+
+                try {
                     fileList = transfer.list();
-                }
-                catch (StorageException ex) {
+                } catch (StorageException ex) {
                     logger.log(Level.SEVERE, null, ex);
                     return;
                 }
             }
-            
+
             for (CloneChunk chunk : file.getChunks()) {
                 // Chunk has been uploaded before
                 if (fileList.containsKey(chunk.getFileName())) {
-                    if (logger.isLoggable(Level.INFO)) {
-                        logger.log(Level.INFO, "UploadManager: Chunk {0} already uploaded", chunk.getFileName());
-                    }
-                    
+                    logger.log(Level.INFO, "UploadManager: Chunk {0} already uploaded", chunk.getFileName());
+
                     continue;
                 }
 
@@ -153,35 +155,28 @@ public class Uploader {
                     if (logger.isLoggable(Level.INFO)) {
                         logger.log(Level.INFO, "UploadManager: Uploading chunk {0} ...", chunk.getFileName());
                     }
-                    
+
                     transfer.upload(config.getCache().getCacheChunk(chunk), new RemoteFile(chunk.getFileName()));
-                } 
-                catch (StorageException ex) {
-                    logger.log(Level.SEVERE,"UploadManager: Uploading chunk "+chunk.getFileName()+" FAILED !!",ex);
+                } catch (StorageException ex) {
+                    logger.log(Level.SEVERE, "UploadManager: Uploading chunk " + chunk.getFileName() + " FAILED !!", ex);
                     return;
                 }
 
             }
 
-            if (logger.isLoggable(Level.INFO)) {
-                logger.log(Level.INFO, "UploadManager: File {0} uploaded", file.getAbsolutePath());
-            }
+            logger.log(Level.INFO, "UploadManager: File {0} uploaded", file.getAbsolutePath());
 
             // Update DB sync status
             file.setSyncStatus(SyncStatus.UPTODATE);
             file.merge();
-                        
-            touch(file, SyncStatus.UPTODATE);
 
-            if (queue.isEmpty()) {
-                tray.setStatusIcon(Tray.StatusIcon.UPTODATE);
-            }
+            touch(file, SyncStatus.UPTODATE);
         }
 
         private void touch(CloneFile file, SyncStatus syncStatus) {
             // Touch myself
             desktop.touch(file.getFile());
-            
+
             // Touch parents
             CloneFile childCF = file;
             CloneFile parentCF;
@@ -190,7 +185,7 @@ public class Uploader {
                 if (parentCF.getSyncStatus() != syncStatus) {
                     parentCF.setSyncStatus(syncStatus);
                     parentCF.merge();
-                    
+
                     desktop.touch(parentCF.getFile());
                 }
 
@@ -199,51 +194,53 @@ public class Uploader {
         }
 
         private void updateParents(CloneFile file) {
-        // Update parent sync status
+            // Update parent sync status
             CloneFile childCF = file;
             CloneFile parentCF;
 
             while (null != (parentCF = childCF.getParent())) {
-            SyncStatus parentSyncStatus = parentCF.getSyncStatus();
+                SyncStatus parentSyncStatus = parentCF.getSyncStatus();
 
-            int uptodateCount = 0;
-            int conflictCount = 0;
+                int uptodateCount = 0;
+                int conflictCount = 0;
 
-            List<CloneFile> allChildren = db.getAllChildren(parentCF);
+                List<CloneFile> allChildren = db.getAllChildren(parentCF);
 
-            c: for (CloneFile child : allChildren) {
-                if (child.getSyncStatus() == SyncStatus.SYNCING) {
+                c:
+                for (CloneFile child : allChildren) {
+                    if (child.getSyncStatus() == SyncStatus.SYNCING) {
+                        parentSyncStatus = SyncStatus.SYNCING;
+                        break c;
+                    }
 
-                parentSyncStatus = SyncStatus.SYNCING;
-                break c;
+                    if (child.getSyncStatus() == SyncStatus.UPTODATE) {
+                        uptodateCount++;
+                    }
+
+                    if (child.getSyncStatus() == CloneFile.SyncStatus.CONFLICT) {
+                        conflictCount++;
+                    }
                 }
 
-                if (child.getSyncStatus() == SyncStatus.UPTODATE)
-                uptodateCount++;
+                if (uptodateCount == allChildren.size()) {
+                    parentSyncStatus = CloneFile.SyncStatus.UPTODATE;
+                } else if (conflictCount > 0) {
+                    parentSyncStatus = CloneFile.SyncStatus.CONFLICT;
+                }
 
-                if (child.getSyncStatus() == CloneFile.SyncStatus.CONFLICT)
-                conflictCount++;
-            }
+                if (parentSyncStatus != parentCF.getSyncStatus()) {
+                    logger.log(Level.INFO, "UploadManager: UPDATE ICON FOR {0} TO: {1}", new Object[]{parentCF.getFile(), parentSyncStatus});
 
-            if (uptodateCount == allChildren.size())
-                parentSyncStatus = CloneFile.SyncStatus.UPTODATE;
+                    config.getDatabase().getEntityManager().getTransaction().begin();
+                    parentCF.setSyncStatus(parentSyncStatus);
+                    config.getDatabase().getEntityManager().merge(parentCF);
+                    config.getDatabase().getEntityManager().flush();
+                    config.getDatabase().getEntityManager().getTransaction().commit();
 
-            else if (conflictCount > 0)
-                parentSyncStatus = CloneFile.SyncStatus.CONFLICT;
+                    desktop.touch(parentCF.getFile());
+                }
 
-            if (parentSyncStatus != parentCF.getSyncStatus()) {
-                logger.info("UploadManager: UPDATE ICON FOR "+parentCF.getFile()+" TO: "+parentSyncStatus);
-
-                config.getDatabase().getEntityManager().getTransaction().begin();
-                parentCF.setSyncStatus(parentSyncStatus);
-                config.getDatabase().getEntityManager().merge(parentCF);
-                config.getDatabase().getEntityManager().flush();
-                config.getDatabase().getEntityManager().getTransaction().commit();
-
-                desktop.touch(parentCF.getFile());
-            }
-
-            childCF = parentCF;
+                childCF = parentCF;
             }
 
         }

@@ -29,6 +29,7 @@ AUTHORS
 -------
 Idea:
    Philipp C. Heckel <philipp.heckel@gmail.com>
+
 Development:
    Guillermo Guerrero <gguerrero1985@gmail.com>
    

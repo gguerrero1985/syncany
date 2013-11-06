@@ -241,9 +241,7 @@ public class Config {
     }
 
     public synchronized void load(File configFolder) throws ConfigException {
-        if (logger.isLoggable(Level.INFO)) {
-            logger.log(Level.INFO, "Loading configuration from {0}", configFolder);
-        }
+        logger.log(Level.INFO, "Loading configuration from {0}", configFolder);
         
         configDir = configFolder;
         configFile = new File(configDir.getAbsoluteFile()+File.separator+Constants.CONFIG_FILENAME);
@@ -286,8 +284,7 @@ public class Config {
             self = new ConfigNode(doc.getDocumentElement());
 
             loadDOM(self);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new ConfigException(e);
         }
     }

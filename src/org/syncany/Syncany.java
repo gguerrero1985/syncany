@@ -34,6 +34,7 @@ import org.syncany.util.StringUtil;
  * Main class for the Syncany client.
  *
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
+ * @author Guillermo Guerrero
  */
 public class Syncany {
 
@@ -87,6 +88,8 @@ public class Syncany {
 
             startDemonOnly = line.hasOption("daemon");
 
+            Application app = new Application(startDemonOnly);
+            
             // Load config
             if (line.hasOption("config")) {
                 File configFolder = new File(line.getOptionValue("config"));
@@ -111,6 +114,8 @@ public class Syncany {
 
                         folder.delete();
                         configFile.delete();
+                        
+                        app.initFirstTimeWizard();
                         config.load();
                     }
                 } else { // new configuration
@@ -121,6 +126,8 @@ public class Syncany {
             if (config.getProfiles().list().isEmpty()) {
                 throw new ConfigException("Could not load a profile, check the configuration file.");
             }
+            
+            app.start();
         } catch (ConfigException e) {
             System.err.println("ERROR: Configuration exception: " + e.getMessage());
             System.err.println(StringUtil.getStackTrace(e));
@@ -129,12 +136,6 @@ public class Syncany {
             System.err.println("ERROR: Command line arguments invalid: " + e.getMessage());
             System.err.println(StringUtil.getStackTrace(e));
             System.exit(1);
-        }
-
-        // Start app!
-        try {
-            Application app = new Application(startDemonOnly);
-            app.start();
         } catch (InitializationException e) {
             if (startDemonOnly) {
                 System.err.println("ERROR: " + e.getMessage());

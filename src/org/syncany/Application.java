@@ -235,7 +235,7 @@ public class Application {
         }
     }
 
-    private void initFirstTimeWizard() {
+    public void initFirstTimeWizard() {
         Profile profile = WizardDialog.showWizard();
 
         // Ok clicked

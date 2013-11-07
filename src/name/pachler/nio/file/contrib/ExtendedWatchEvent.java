@@ -20,7 +20,6 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
 package name.pachler.nio.file.contrib;
 
 import name.pachler.nio.file.WatchEvent;
@@ -31,8 +30,9 @@ import name.pachler.nio.file.WatchKey;
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
 public class ExtendedWatchEvent {
-    private WatchKey parentKey;
-    private WatchEvent event;
+
+    private final WatchKey parentKey;
+    private final WatchEvent event;
 
     public ExtendedWatchEvent(WatchKey parentKey, WatchEvent event) {
         this.parentKey = parentKey;
@@ -45,13 +45,18 @@ public class ExtendedWatchEvent {
 
     public WatchKey getParentKey() {
         return parentKey;
-    }   
+    }
 
     @Override
     public boolean equals(Object obj) {
         ExtendedWatchEvent o = (ExtendedWatchEvent) obj;
 
         return o.getParentKey().equals(getParentKey())
-            && o.getEvent().equals(getEvent());
-    }        
+                && o.getEvent().equals(getEvent());
+    }
+
+    @Override
+    public String toString() {
+        return "ExtendedWatchEvent[parentKey=" + parentKey + ", event=" + event + "]";
+    }
 }

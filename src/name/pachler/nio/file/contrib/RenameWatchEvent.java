@@ -30,7 +30,7 @@ import name.pachler.nio.file.WatchEvent;
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
 public class RenameWatchEvent extends WatchEvent<RenamePathContext> {
-    private RenamePathContext context;
+    private final RenamePathContext context;
 
     public RenameWatchEvent(ExtendedWatchEvent fromEvent, ExtendedWatchEvent toEvent) {
         this.context = new RenamePathContext(fromEvent, toEvent);

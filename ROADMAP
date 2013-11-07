@@ -1,3 +1,5 @@
+Name.patch checked.
+
 org.syncany.Environment.java checked.
 org.syncany.Syncany.java checked.
 
@@ -7,7 +9,7 @@ org.syncany.Syncany.java checked.
 
 
 
-
+- Arreglar tray.
 - Crear instaladores mac, windows, ubuntu
 http://www.centerkey.com/mac/java/
 http://stableupdate.sourceforge.net/
@@ -20,3 +22,7 @@ https://github.com/liferay/liferay-nativity
 - Arreglar bugs.
 - Refactors.
 
+Hostnames: 		f4-preview.your-hosting.net
+FTP Nombre de usuario: 	1542479_gguerrero
+	
+path: 			/home/www/gguerrero

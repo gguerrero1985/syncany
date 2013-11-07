@@ -28,8 +28,8 @@ package name.pachler.nio.file.contrib;
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
 public final class RenamePathContext {
-    private ExtendedWatchEvent fromEvent;        
-    private ExtendedWatchEvent toEvent;
+    private final ExtendedWatchEvent fromEvent;        
+    private final ExtendedWatchEvent toEvent;
 
     public RenamePathContext(ExtendedWatchEvent fromEvent, ExtendedWatchEvent toEvent) {
         this.fromEvent = fromEvent;

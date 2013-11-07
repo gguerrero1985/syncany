@@ -32,6 +32,7 @@ import org.syncany.gui.desktop.Desktop;
 import org.syncany.watch.local.LocalWatcher;
 import java.awt.EventQueue;
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.syncany.gui.wizard.WizardDialog;
@@ -112,7 +113,7 @@ public class Application {
     }
 
     public void start() throws InitializationException {
-        logger.log(Level.INFO, "{0}#Starting Application daemon: {1} ...", new Object[]{env.getMachineName(), startDemonOnly});
+        logger.log(Level.INFO, "{0}#Starting Application: {1} ...", new Object[]{env.getMachineName(), startDemonOnly});
 
         // Do NOT change the order of these method calls!
         // They strongly depend on each other.        
@@ -146,9 +147,7 @@ public class Application {
     }
 
     private void initDependencies() {
-        if (logger.isLoggable(Level.INFO)) {
-            logger.info("Instantiating dependencies ...");
-        }
+        logger.info("Instantiating dependencies ...");
 
         config = Config.getInstance();
         desktop = Desktop.getInstance();
@@ -182,7 +181,10 @@ public class Application {
                     }
                 }
             });
-        } catch (Exception ex) {
+        } catch (InterruptedException ex) {
+            logger.log(Level.SEVERE, "Unable to init SettingsDialog.", ex);
+            throw new InitializationException(ex);
+        } catch (InvocationTargetException ex) {
             logger.log(Level.SEVERE, "Unable to init SettingsDialog.", ex);
             throw new InitializationException(ex);
         }
@@ -283,7 +285,7 @@ public class Application {
                     break;
 
                 default:
-                    logger.warning("Unknown tray event type: " + event);
+                    logger.log(Level.WARNING, "Unknown tray event type: {0}", event);
                 // Fressen.
             }
         }

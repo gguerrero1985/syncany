@@ -69,7 +69,7 @@ public class FileUtil {
             return df.format(size / KB) + " KB";
         }
 
-        return "" + (int) size + " bytes";
+        return (int) size + " bytes";
     }
 
     public static String getRelativePath(File base, File file) {
@@ -358,7 +358,7 @@ public class FileUtil {
                 return showBrowseDialogLinux(BrowseType.DIRECTORIES_ONLY);
 
             case Mac:
-                return showBrowseDialogMac(FileDialog.LOAD);
+                return showBrowseDialogMac(BrowseType.DIRECTORIES_ONLY);
 
             case Windows:
             default:
@@ -372,7 +372,7 @@ public class FileUtil {
                 return showBrowseDialogLinux(BrowseType.FILES_ONLY);
 
             case Mac:
-                return showBrowseDialogMac(FileDialog.LOAD);
+                return showBrowseDialogMac(BrowseType.FILES_ONLY);
 
             case Windows:
             default:
@@ -392,12 +392,10 @@ public class FileUtil {
             }
 
             return (File) responseObj;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             if (type == BrowseType.FILES_ONLY) {
                 return showBrowseDialogDefault(JFileChooser.FILES_ONLY);
-            }
-            else if (type == BrowseType.DIRECTORIES_ONLY) {
+            } else if (type == BrowseType.DIRECTORIES_ONLY) {
                 return showBrowseDialogDefault(JFileChooser.DIRECTORIES_ONLY);
             }
             
@@ -405,14 +403,24 @@ public class FileUtil {
         }
     }
 
-    private static File showBrowseDialogMac(int fileDialogSelectionMode) {
+    private static File showBrowseDialogMac(BrowseType type) {
         // AWT looks best on Mac:
         // http://today.java.net/pub/a/today/2004/01/29/swing.html
 
-        FileDialog dialog = new FileDialog(new Frame(), "Choose File", fileDialogSelectionMode);
+        String title = "";
+        if (type == BrowseType.DIRECTORIES_ONLY) {
+            System.setProperty("apple.awt.fileDialogForDirectories", "true");
+            title = "Choose Folder";
+        } else if (type == BrowseType.FILES_ONLY) {
+            System.setProperty("apple.awt.fileDialogForDirectories", "false");
+            title = "Choose File";
+        }
+
+        FileDialog dialog = new FileDialog(new Frame(), title);
         dialog.setVisible(true);
 
-        return new File(dialog.getFile());
+        String path = dialog.getDirectory() + dialog.getFile();
+        return new File(path);
     }
 
     private static File showBrowseDialogDefault(int jFileChooserFileSelectionMode) {

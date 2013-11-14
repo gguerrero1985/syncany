@@ -1,4 +1,4 @@
-<?xml version="1.1" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8" ?>
 
 <Form version="1.5" maxVersion="1.7" type="org.netbeans.modules.form.forminfo.JPanelFormInfo">
   <AuxValues>
@@ -79,6 +79,7 @@
     </Component>
     <Component class="javax.swing.JTextField" name="txtHost">
       <Properties>
+        <Property name="text" type="java.lang.String" value="ftp.vzpla.net"/>
         <Property name="name" type="java.lang.String" value="txtHost" noResource="true"/>
       </Properties>
     </Component>
@@ -91,6 +92,7 @@
     </Component>
     <Component class="javax.swing.JTextField" name="txtUsername">
       <Properties>
+        <Property name="text" type="java.lang.String" value="user_13976792"/>
         <Property name="name" type="java.lang.String" value="txtUsername" noResource="true"/>
       </Properties>
     </Component>
@@ -129,6 +131,7 @@
     </Component>
     <Component class="javax.swing.JTextField" name="txtFolder">
       <Properties>
+        <Property name="text" type="java.lang.String" value="/"/>
         <Property name="name" type="java.lang.String" value="txtFolder" noResource="true"/>
       </Properties>
     </Component>

@@ -4,6 +4,8 @@ org.syncany.Environment.java checked.
 org.syncany.Syncany.java checked.
 
 
+org.syncany.gui.settings.FolderDialog.java
+
 
 
 

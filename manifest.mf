@@ -3,5 +3,5 @@ Ant-Version: Apache Ant 1.9.1
 Created-By: 1.7.0_45-b18 (Oracle Corporation)
 Project: Syncany
 Version: 0.1-dev
-URL: https://github.com/ryanfox1985/syncany
+URL: https://github.com/gguerrero1985/syncany
 
